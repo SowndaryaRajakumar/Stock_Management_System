@@ -1,0 +1,21 @@
+{
+  "name": "stock-system-launcher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root development launcher for Consumables (Electrical) and Computer Hardware Stock Management systems",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"ELECTRICAL,HARDWARE,FRONTEND\" -c \"yellow.bold,blue.bold,cyan.bold\" \"npm --prefix ./StockManagement/server start\" \"npm --prefix ./ComputerHardwareManagement/server start\" \"npm --prefix ./ComputerHardwareManagement run dev\"",
+    "build": "npm --prefix ./StockManagement run build && npm --prefix ./ComputerHardwareManagement run build",
+    "build:electrical": "npm --prefix ./StockManagement run build",
+    "build:hardware": "npm --prefix ./ComputerHardwareManagement run build",
+    "test": "npm --prefix ./StockManagement test && npm --prefix ./ComputerHardwareManagement test",
+    "test:electrical": "npm --prefix ./StockManagement test",
+    "test:hardware": "npm --prefix ./ComputerHardwareManagement test",
+    "start:electrical": "npm --prefix ./StockManagement/server start",
+    "start:hardware": "npm --prefix ./ComputerHardwareManagement/server start",
+    "start:frontend": "npm --prefix ./ComputerHardwareManagement run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
