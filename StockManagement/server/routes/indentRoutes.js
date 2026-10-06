@@ -4,6 +4,7 @@ import {
   getIndentById,
   createIndent,
   updateIndent,
+  deleteIndent,
   submitIndent,
   recommendIndent,
   approveIndent,
@@ -21,7 +22,9 @@ router.post('/', protect, requireStaffOrAdmin, createIndent);
 
 router.get('/:id', protect, getIndentById);
 router.put('/:id', protect, requireStaffOrAdmin, updateIndent);
+router.delete('/:id', protect, requireStaffOrAdmin, deleteIndent);
 
+// Compatibility endpoints
 router.post('/:id/submit', protect, requireStaffOrAdmin, submitIndent);
 router.post('/:id/recommend', protect, requireStaffOrAdmin, recommendIndent);
 router.post('/:id/approve', protect, requireAdmin, approveIndent);

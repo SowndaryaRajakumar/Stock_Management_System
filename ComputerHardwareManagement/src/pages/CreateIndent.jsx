@@ -9,7 +9,7 @@ import { useSystem } from '../context/SystemContext';
 import Loading from '../components/common/Loading';
 
 export const CreateIndent = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { fetchNotifications } = useNotifications();
   const { activeSystem } = useSystem();
   const navigate = useNavigate();
@@ -182,11 +182,13 @@ export const CreateIndent = () => {
       return;
     }
 
-    // Validate requested quantity against available store stock
-    for (const item of items) {
-      if (item.availableStock !== undefined && item.requestedQuantity > item.availableStock) {
-        setError(`Requested quantity (${item.requestedQuantity}) for ${item.productName} exceeds available store stock (${item.availableStock} max).`);
-        return;
+    // Validate requested quantity against available store stock for admin views
+    if (isAdmin) {
+      for (const item of items) {
+        if (item.availableStock !== undefined && item.requestedQuantity > item.availableStock) {
+          setError(`Requested quantity (${item.requestedQuantity}) for ${item.productName} exceeds available store stock (${item.availableStock} max).`);
+          return;
+        }
       }
     }
 
@@ -362,9 +364,9 @@ export const CreateIndent = () => {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: '40%' }}>Product Selection</th>
+                      <th style={{ width: isAdmin ? '40%' : '45%' }}>Product Selection</th>
                       <th>Register</th>
-                      <th>Available in Store</th>
+                      {isAdmin && <th>Available in Store</th>}
                       <th>Requested Quantity</th>
                       <th>Unit</th>
                       <th style={{ width: '40px' }}></th>
@@ -391,25 +393,27 @@ export const CreateIndent = () => {
                         <td>
                           <span className="badge badge-blue">{item.stockRegister || '—'}</span>
                         </td>
-                        <td>
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              color: item.productId && item.availableStock === 0 ? 'var(--red-600)' : 'inherit'
-                            }}
-                          >
-                            {item.productId ? item.availableStock : '—'}
-                          </span>
-                        </td>
+                        {isAdmin && (
+                          <td>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: item.productId && item.availableStock === 0 ? 'var(--red-600)' : 'inherit'
+                              }}
+                            >
+                              {item.productId ? item.availableStock : '—'}
+                            </span>
+                          </td>
+                        )}
                         <td style={{ width: '130px' }}>
                           <input
                             type="number"
                             min="1"
-                            max={item.availableStock > 0 ? item.availableStock : undefined}
+                            max={isAdmin && item.availableStock > 0 ? item.availableStock : undefined}
                             value={item.requestedQuantity}
                             onChange={(e) => handleQtyChange(idx, e.target.value)}
                             required
-                            disabled={!item.productId || item.availableStock === 0}
+                            disabled={!item.productId || (isAdmin && item.availableStock === 0)}
                             style={{
                               width: '100%',
                               padding: '6px 8px',

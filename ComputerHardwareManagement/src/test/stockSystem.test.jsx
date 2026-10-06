@@ -361,7 +361,17 @@ describe('Consumable Stock Management System - MERN Stack Frontend Suite', () =>
   });
 
   it('3. Renders Dashboard with summary metrics', async () => {
-    renderWithProviders(<Dashboard />, { initialRoute: '/dashboard', authenticated: true });
+    renderWithProviders(<Dashboard />, { initialRoute: '/electrical/dashboard', authenticated: true, system: 'electrical' });
+
+    await waitFor(() => {
+      expect(screen.getByText('Total Products')).toBeInTheDocument();
+      expect(screen.getByText('Current Stock')).toBeInTheDocument();
+      expect(screen.getByText('Manual Indents')).toBeInTheDocument();
+    });
+  });
+
+  it('3b. Renders Hardware Dashboard with Pending Indents online requisition metric', async () => {
+    renderWithProviders(<Dashboard />, { initialRoute: '/hardware/dashboard', authenticated: true, system: 'hardware' });
 
     await waitFor(() => {
       expect(screen.getByText('Total Products')).toBeInTheDocument();
@@ -411,7 +421,7 @@ describe('Consumable Stock Management System - MERN Stack Frontend Suite', () =>
     });
   });
 
-  it('8. Create Indent Page: Renders multi-item requisition form for faculty', async () => {
+  it('8. Create Indent Page: Renders multi-item requisition form for faculty with Available in Store hidden', async () => {
     renderWithProviders(<CreateIndent />, {
       initialRoute: '/indents/create',
       authenticated: true,
@@ -421,6 +431,53 @@ describe('Consumable Stock Management System - MERN Stack Frontend Suite', () =>
     const titleEl = await screen.findByRole('heading', { name: 'Create Material Indent' });
     expect(titleEl).toBeInTheDocument();
     expect(screen.getByText(/Requisition Notice/i)).toBeInTheDocument();
+
+    // Verify 'Available in Store' is NOT visible to faculty
+    expect(screen.queryByText('Available in Store')).not.toBeInTheDocument();
+  });
+
+  it('8b. Create Indent Page: Renders Available in Store column when viewed by Admin', async () => {
+    renderWithProviders(<CreateIndent />, {
+      initialRoute: '/indents/create',
+      authenticated: true,
+      user: mockAdminUser
+    });
+
+    const titleEl = await screen.findByRole('heading', { name: 'Create Material Indent' });
+    expect(titleEl).toBeInTheDocument();
+
+    // Verify 'Available in Store' is visible to Admin
+    expect(screen.getByText('Available in Store')).toBeInTheDocument();
+  });
+
+  it('8c. Create Indent Page: Faculty can select product, enter quantity, and submit indent successfully', async () => {
+    renderWithProviders(<CreateIndent />, {
+      initialRoute: '/indents/create',
+      authenticated: true,
+      user: mockFacultyUser
+    });
+
+    await screen.findByRole('heading', { name: 'Create Material Indent' });
+
+    // Purpose input
+    const purposeInput = screen.getByPlaceholderText(/IoT Lab Setup/i);
+    fireEvent.change(purposeInput, { target: { value: 'Microcontroller Lab Practical' } });
+
+    // Select product
+    const productSelect = screen.getByRole('combobox', { name: '' });
+    fireEvent.change(productSelect, { target: { value: 'p1' } });
+
+    // Enter requested quantity
+    const qtyInput = screen.getByRole('spinbutton');
+    fireEvent.change(qtyInput, { target: { value: '15' } });
+
+    // Submit requisition button
+    const submitBtn = screen.getByRole('button', { name: /Submit Requisition/i });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   it('9. Stock History: Renders Movement history and filter controls', async () => {
