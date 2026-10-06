@@ -1,33 +1,34 @@
 import { Op } from 'sequelize';
-import { sequelize, User, Faculty, Department, Role, Indent, Transfer, Notification } from '../models/index.js';
+import { sequelize, User, Department, Role, Indent, Transfer, StockTransaction, Notification } from '../models/index.js';
 import { hashPassword } from '../utils/password.js';
 
 /**
- * Format faculty response object (exclude password)
+ * Format faculty response object from User model (exclude password)
  */
-const formatFaculty = (faculty) => {
-  if (!faculty) return null;
-  const user = faculty.user || {};
-  const department = faculty.department || user.department || {};
+const formatFaculty = (user, extra = {}) => {
+  if (!user) return null;
+  const raw = user.toJSON ? user.toJSON() : user;
+  const department = raw.department || {};
+  const status = (raw.active === true || raw.active === 1) ? 'ACTIVE' : 'INACTIVE';
 
   return {
-    id: faculty.id,
-    _id: faculty.id,
-    user_id: faculty.user_id,
-    employee_code: faculty.employee_code,
-    name: user.name || '',
-    username: user.username || '',
-    email: user.email || '',
-    department_id: faculty.department_id || user.department_id,
+    id: raw.id,
+    _id: raw.id,
+    user_id: raw.id,
+    employee_code: extra.employee_code || raw.username?.toUpperCase() || '',
+    name: raw.name || '',
+    username: raw.username || '',
+    email: raw.email || '',
+    department_id: raw.department_id || null,
     department_name: department.name || 'Unassigned',
     department_code: department.code || '',
     department: department.name || 'Unassigned',
-    designation: faculty.designation || '',
-    phone: faculty.phone || '',
-    status: faculty.status || 'ACTIVE',
-    active: faculty.status === 'ACTIVE' && Boolean(user.active),
-    created_at: faculty.created_at,
-    updated_at: faculty.updated_at
+    designation: extra.designation || 'Faculty',
+    phone: extra.phone || '',
+    status,
+    active: Boolean(raw.active),
+    created_at: raw.created_at,
+    updated_at: raw.updated_at
   };
 };
 
@@ -38,15 +39,31 @@ export const getFacultyList = async (req, res, next) => {
   try {
     const { search, department_id, status } = req.query;
 
-    const whereFaculty = {};
-    if (department_id) {
-      whereFaculty.department_id = department_id;
-    }
-    if (status && status !== 'ALL') {
-      whereFaculty.status = status.toUpperCase();
+    let facultyRole = await Role.findOne({ where: { name: 'FACULTY' } });
+    if (!facultyRole) {
+      facultyRole = await Role.create({
+        name: 'FACULTY',
+        description: 'Academic Faculty'
+      });
     }
 
-    const whereUser = {};
+    const whereUser = {
+      role_id: facultyRole.id
+    };
+
+    if (department_id) {
+      whereUser.department_id = Number(department_id);
+    }
+
+    if (status && status !== 'ALL') {
+      const cleanStatus = status.toUpperCase();
+      if (cleanStatus === 'ACTIVE') {
+        whereUser.active = true;
+      } else if (cleanStatus === 'INACTIVE') {
+        whereUser.active = false;
+      }
+    }
+
     if (search && search.trim()) {
       const term = `%${search.trim().toLowerCase()}%`;
       whereUser[Op.or] = [
@@ -56,31 +73,30 @@ export const getFacultyList = async (req, res, next) => {
       ];
     }
 
-    const facultyRecords = await Faculty.findAll({
-      where: whereFaculty,
+    const facultyUsers = await User.findAll({
+      where: whereUser,
       include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'name', 'email', 'role_id', 'active', 'department_id'],
-          where: Object.keys(whereUser).length > 0 ? whereUser : undefined
-        },
         {
           model: Department,
           as: 'department',
           attributes: ['id', 'name', 'code']
+        },
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name']
         }
       ],
-      order: [['created_at', 'DESC']]
+      order: [['created_at', 'DESC'], ['id', 'DESC']]
     });
 
-    const data = facultyRecords.map(formatFaculty);
+    const data = facultyUsers.map(u => formatFaculty(u));
 
     res.json({
       success: true,
       count: data.length,
       data,
-      faculty: data // alias
+      faculty: data // alias for compatibility
     });
   } catch (error) {
     next(error);
@@ -94,22 +110,29 @@ export const getFacultyById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const faculty = await Faculty.findByPk(id, {
+    let facultyRole = await Role.findOne({ where: { name: 'FACULTY' } });
+    const where = { id };
+    if (facultyRole) {
+      where.role_id = facultyRole.id;
+    }
+
+    const user = await User.findOne({
+      where,
       include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username', 'name', 'email', 'role_id', 'active', 'department_id']
-        },
         {
           model: Department,
           as: 'department',
           attributes: ['id', 'name', 'code']
+        },
+        {
+          model: Role,
+          as: 'role',
+          attributes: ['id', 'name']
         }
       ]
     });
 
-    if (!faculty) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: `Faculty member not found with ID ${id}`
@@ -118,7 +141,7 @@ export const getFacultyById = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: formatFaculty(faculty)
+      data: formatFaculty(user)
     });
   } catch (error) {
     next(error);
@@ -144,7 +167,7 @@ export const createFaculty = async (req, res, next) => {
     } = req.body;
 
     // 1. Validate required fields
-    if (!employee_code || !name || !username || !email || !password || !department_id) {
+    if (!name || !email || !password || !department_id || (!username && !employee_code)) {
       await transaction.rollback();
       return res.status(400).json({
         success: false,
@@ -152,12 +175,12 @@ export const createFaculty = async (req, res, next) => {
       });
     }
 
-    const cleanUsername = String(username).trim().toLowerCase();
+    const cleanUsername = String(username || employee_code).trim().toLowerCase();
     const cleanEmail = String(email).trim().toLowerCase();
-    const cleanEmpCode = String(employee_code).trim().toUpperCase();
-    const cleanStatus = String(status).toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    const cleanEmpCode = String(employee_code || username).trim().toUpperCase();
+    const cleanStatus = String(status).toUpperCase() === 'INACTIVE' ? false : true;
 
-    // 2. Check uniqueness of username, email, employee_code
+    // 2. Check uniqueness of username and email
     const existingUser = await User.findOne({
       where: {
         [Op.or]: [
@@ -177,20 +200,7 @@ export const createFaculty = async (req, res, next) => {
       });
     }
 
-    const existingFacultyCode = await Faculty.findOne({
-      where: { employee_code: cleanEmpCode },
-      transaction
-    });
-
-    if (existingFacultyCode) {
-      await transaction.rollback();
-      return res.status(400).json({
-        success: false,
-        message: `Employee Code "${cleanEmpCode}" is already in use.`
-      });
-    }
-
-    // 3. Find FACULTY role
+    // 3. Find or create FACULTY role
     let facultyRole = await Role.findOne({ where: { name: 'FACULTY' }, transaction });
     if (!facultyRole) {
       facultyRole = await Role.create({
@@ -210,34 +220,28 @@ export const createFaculty = async (req, res, next) => {
       email: cleanEmail,
       role_id: facultyRole.id,
       department_id: Number(department_id),
-      avatar_text: name.trim().charAt(0).toUpperCase(),
-      active: cleanStatus === 'ACTIVE'
-    }, { transaction });
-
-    // 6. Create faculty record in MySQL
-    const faculty = await Faculty.create({
-      user_id: user.id,
-      employee_code: cleanEmpCode,
-      department_id: Number(department_id),
-      designation: designation ? String(designation).trim() : 'Faculty',
-      phone: phone ? String(phone).trim() : null,
-      status: cleanStatus
+      avatar_text: String(name).trim().charAt(0).toUpperCase(),
+      active: cleanStatus
     }, { transaction });
 
     await transaction.commit();
 
     // Re-fetch complete record with associations
-    const saved = await Faculty.findByPk(faculty.id, {
+    const saved = await User.findByPk(user.id, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'name', 'email', 'role_id', 'active', 'department_id'] },
-        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] }
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
+        { model: Role, as: 'role', attributes: ['id', 'name'] }
       ]
     });
 
     res.status(201).json({
       success: true,
       message: 'Faculty account created successfully.',
-      data: formatFaculty(saved)
+      data: formatFaculty(saved, {
+        designation: designation ? String(designation).trim() : 'Faculty',
+        phone: phone ? String(phone).trim() : '',
+        employee_code: cleanEmpCode
+      })
     });
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -255,20 +259,32 @@ export const updateFaculty = async (req, res, next) => {
     const {
       name,
       email,
+      username,
       department_id,
       designation,
       phone,
       employee_code,
       status,
+      active,
       password
     } = req.body;
 
-    const faculty = await Faculty.findByPk(id, {
-      include: [{ model: User, as: 'user' }],
+    let facultyRole = await Role.findOne({ where: { name: 'FACULTY' }, transaction });
+    const where = { id };
+    if (facultyRole) {
+      where.role_id = facultyRole.id;
+    }
+
+    const user = await User.findOne({
+      where,
+      include: [
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
+        { model: Role, as: 'role', attributes: ['id', 'name'] }
+      ],
       transaction
     });
 
-    if (!faculty) {
+    if (!user) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
@@ -276,20 +292,12 @@ export const updateFaculty = async (req, res, next) => {
       });
     }
 
-    const user = faculty.user;
-    if (!user) {
-      await transaction.rollback();
-      return res.status(500).json({
-        success: false,
-        message: 'Associated user account record not found.'
-      });
-    }
-
-    // Uniqueness checks if email or employee_code changed
+    // Uniqueness checks if email changed
     if (email && email.trim().toLowerCase() !== user.email.toLowerCase()) {
+      const cleanEmail = email.trim().toLowerCase();
       const existingEmail = await User.findOne({
         where: {
-          email: email.trim().toLowerCase(),
+          email: cleanEmail,
           id: { [Op.ne]: user.id }
         },
         transaction
@@ -301,72 +309,67 @@ export const updateFaculty = async (req, res, next) => {
           message: 'Email address is already in use by another account.'
         });
       }
-      user.email = email.trim().toLowerCase();
+      user.email = cleanEmail;
     }
 
-    if (employee_code && employee_code.trim().toUpperCase() !== faculty.employee_code.toUpperCase()) {
-      const existingCode = await Faculty.findOne({
+    // Uniqueness checks if username changed
+    if (username && username.trim().toLowerCase() !== user.username.toLowerCase()) {
+      const cleanUsername = username.trim().toLowerCase();
+      const existingUsername = await User.findOne({
         where: {
-          employee_code: employee_code.trim().toUpperCase(),
-          id: { [Op.ne]: faculty.id }
+          username: cleanUsername,
+          id: { [Op.ne]: user.id }
         },
         transaction
       });
-      if (existingCode) {
+      if (existingUsername) {
         await transaction.rollback();
         return res.status(400).json({
           success: false,
-          message: 'Employee code is already in use by another faculty member.'
+          message: 'Username is already in use by another account.'
         });
       }
-      faculty.employee_code = employee_code.trim().toUpperCase();
+      user.username = cleanUsername;
     }
 
     if (name) {
-      user.name = name.trim();
-      user.avatar_text = name.trim().charAt(0).toUpperCase();
+      user.name = String(name).trim();
+      user.avatar_text = user.name.charAt(0).toUpperCase();
     }
 
     if (department_id) {
-      faculty.department_id = Number(department_id);
       user.department_id = Number(department_id);
     }
 
-    if (designation !== undefined) {
-      faculty.designation = designation ? designation.trim() : '';
-    }
-
-    if (phone !== undefined) {
-      faculty.phone = phone ? phone.trim() : null;
-    }
-
-    if (status) {
-      const cleanStatus = status.toUpperCase() === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
-      faculty.status = cleanStatus;
-      user.active = cleanStatus === 'ACTIVE';
+    if (status !== undefined) {
+      user.active = String(status).toUpperCase() === 'INACTIVE' ? false : true;
+    } else if (active !== undefined) {
+      user.active = Boolean(active);
     }
 
     // If new password provided, hash with bcryptjs
-    if (password && password.trim()) {
-      user.password = await hashPassword(password.trim());
+    if (password && String(password).trim()) {
+      user.password = await hashPassword(String(password).trim());
     }
 
     await user.save({ transaction });
-    await faculty.save({ transaction });
-
     await transaction.commit();
 
-    const updated = await Faculty.findByPk(faculty.id, {
+    const updated = await User.findByPk(user.id, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'username', 'name', 'email', 'role_id', 'active', 'department_id'] },
-        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] }
+        { model: Department, as: 'department', attributes: ['id', 'name', 'code'] },
+        { model: Role, as: 'role', attributes: ['id', 'name'] }
       ]
     });
 
     res.json({
       success: true,
       message: 'Faculty details updated successfully.',
-      data: formatFaculty(updated)
+      data: formatFaculty(updated, {
+        designation: designation !== undefined ? String(designation).trim() : 'Faculty',
+        phone: phone !== undefined ? String(phone).trim() : '',
+        employee_code: employee_code ? String(employee_code).trim().toUpperCase() : user.username.toUpperCase()
+      })
     });
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -383,12 +386,18 @@ export const updateFacultyStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status, active } = req.body;
 
-    const faculty = await Faculty.findByPk(id, {
-      include: [{ model: User, as: 'user' }],
+    let facultyRole = await Role.findOne({ where: { name: 'FACULTY' }, transaction });
+    const where = { id };
+    if (facultyRole) {
+      where.role_id = facultyRole.id;
+    }
+
+    const user = await User.findOne({
+      where,
       transaction
     });
 
-    if (!faculty) {
+    if (!user) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
@@ -396,31 +405,26 @@ export const updateFacultyStatus = async (req, res, next) => {
       });
     }
 
-    let newStatus;
+    let newActive;
     if (active !== undefined) {
-      newStatus = active ? 'ACTIVE' : 'INACTIVE';
+      newActive = Boolean(active);
     } else if (status !== undefined) {
-      newStatus = String(status).toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE';
+      newActive = String(status).toUpperCase() === 'ACTIVE';
     } else {
-      newStatus = faculty.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+      newActive = !user.active;
     }
 
-    faculty.status = newStatus;
-
-    if (faculty.user) {
-      faculty.user.active = newStatus === 'ACTIVE';
-      await faculty.user.save({ transaction });
-    }
-
-    await faculty.save({ transaction });
+    user.active = newActive;
+    await user.save({ transaction });
     await transaction.commit();
 
-    const actionText = newStatus === 'ACTIVE' ? 'activated' : 'deactivated';
+    const actionText = newActive ? 'activated' : 'deactivated';
+    const newStatus = newActive ? 'ACTIVE' : 'INACTIVE';
     res.json({
       success: true,
       message: `Faculty account ${actionText} successfully.`,
       status: newStatus,
-      active: newStatus === 'ACTIVE'
+      active: newActive
     });
   } catch (error) {
     if (transaction) await transaction.rollback();
@@ -428,22 +432,29 @@ export const updateFacultyStatus = async (req, res, next) => {
   }
 };
 
-// @desc    Delete faculty (with FK reference safety) or deactivate if referenced
+// @desc    Delete faculty (or deactivate if referenced)
 // @route   DELETE /api/faculty/:id
 // @access  Private (Admin only)
 export const deleteFaculty = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
     const { id } = req.params;
-    const { deactivate, soft } = req.query;
+    const { deactivate, soft, permanent } = req.query;
     const isDeactivateReq = deactivate === 'true' || soft === 'true' || req.body?.deactivate === true;
+    const isPermanent = permanent === 'true';
 
-    const faculty = await Faculty.findByPk(id, {
-      include: [{ model: User, as: 'user' }],
+    let facultyRole = await Role.findOne({ where: { name: 'FACULTY' }, transaction });
+    const where = { id };
+    if (facultyRole) {
+      where.role_id = facultyRole.id;
+    }
+
+    const user = await User.findOne({
+      where,
       transaction
     });
 
-    if (!faculty) {
+    if (!user) {
       await transaction.rollback();
       return res.status(404).json({
         success: false,
@@ -451,35 +462,16 @@ export const deleteFaculty = async (req, res, next) => {
       });
     }
 
-    const userId = faculty.user_id;
-
-    // Check references across historical records (indents, transfers)
-    const [indentCount, transferCount] = await Promise.all([
-      Indent.count({ where: { requested_by: userId } }),
-      Transfer.count({ where: { issued_by: userId } })
+    // Check references across historical records (indents, transfers, transactions)
+    const [indentCount, transferCount, stockTxCount] = await Promise.all([
+      Indent.count({ where: { requested_by: user.id }, transaction }),
+      Transfer.count({ where: { issued_by: user.id }, transaction }),
+      StockTransaction.count({ where: { recorded_by: user.id }, transaction })
     ]);
 
-    const totalRefs = indentCount + transferCount;
+    const totalRefs = indentCount + transferCount + stockTxCount;
 
-    if (totalRefs > 0) {
-      // If client explicitly requested deactivation or soft delete
-      if (isDeactivateReq) {
-        faculty.status = 'INACTIVE';
-        if (faculty.user) {
-          faculty.user.active = false;
-          await faculty.user.save({ transaction });
-        }
-        await faculty.save({ transaction });
-        await transaction.commit();
-
-        return res.json({
-          success: true,
-          message: 'Faculty account deactivated successfully.',
-          status: 'INACTIVE',
-          active: false
-        });
-      }
-
+    if (totalRefs > 0 && isPermanent) {
       await transaction.rollback();
       return res.status(409).json({
         success: false,
@@ -489,17 +481,27 @@ export const deleteFaculty = async (req, res, next) => {
       });
     }
 
-    // 0 historical references: Safe to permanently delete
-    await Notification.destroy({ where: { user_id: userId }, transaction }).catch(() => {});
-    await faculty.destroy({ transaction });
-    if (faculty.user) {
-      await faculty.user.destroy({ transaction });
+    if (isPermanent && totalRefs === 0) {
+      await Notification.destroy({ where: { user_id: user.id }, transaction }).catch(() => {});
+      await user.destroy({ transaction });
+      await transaction.commit();
+
+      return res.json({
+        success: true,
+        message: 'Faculty account deleted successfully.'
+      });
     }
 
+    // Deactivate account (soft delete / deactivate)
+    user.active = false;
+    await user.save({ transaction });
     await transaction.commit();
+
     return res.json({
       success: true,
-      message: 'Faculty account deleted successfully.'
+      message: 'Faculty account deactivated successfully.',
+      status: 'INACTIVE',
+      active: false
     });
   } catch (error) {
     if (transaction) await transaction.rollback();

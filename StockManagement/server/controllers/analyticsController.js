@@ -58,11 +58,7 @@ export const getDashboardStats = async (req, res, next) => {
     let indentWhere = {};
     const isFacultyUser = req.user && req.user.role?.toUpperCase() === 'FACULTY';
     if (isFacultyUser) {
-      const allowedRequesterIds = [req.user.id];
-      if (req.user.facultyId) {
-        allowedRequesterIds.push(req.user.facultyId);
-      }
-      indentWhere = { requested_by: { [Op.in]: allowedRequesterIds } };
+      indentWhere = { requested_by: req.user.id };
 
       const [myTotalRequests, myPendingRequests, myApprovedRequests, myRejectedRequests, myCompletedRequests] = await Promise.all([
         Indent.count({ where: indentWhere }),

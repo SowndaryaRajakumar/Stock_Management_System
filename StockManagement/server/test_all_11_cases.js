@@ -7,7 +7,7 @@ dotenv.config();
 
 import app from './app.js';
 import connectDB from './config/db.js';
-import { User, Faculty, Department, Role, sequelize } from './models/index.js';
+import { User, Department, Role, sequelize } from './models/index.js';
 
 let server;
 let baseUrl;
@@ -277,12 +277,8 @@ async function runTests() {
 
     // Clean up test faculty
     if (createdFacultyId) {
-      const fac = await Faculty.findByPk(createdFacultyId);
-      if (fac) {
-        await User.destroy({ where: { id: fac.user_id } });
-        await Faculty.destroy({ where: { id: createdFacultyId } });
-        console.log('🧹 Cleaned up temporary test faculty record.');
-      }
+      await User.destroy({ where: { id: createdFacultyId } });
+      console.log('🧹 Cleaned up temporary test faculty record.');
     }
 
     console.log('\n====================================================');
