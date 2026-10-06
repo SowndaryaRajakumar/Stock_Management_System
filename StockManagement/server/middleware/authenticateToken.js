@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import { User, Role, Department, Faculty } from '../models/index.js';
+import { User, Role, Department } from '../models/index.js';
 
 /**
  * JWT Authentication Middleware
@@ -51,8 +51,7 @@ export const authenticateToken = async (req, res, next) => {
     const user = await User.findByPk(userId, {
       include: [
         { model: Role, as: 'role' },
-        { model: Department, as: 'department' },
-        { model: Faculty, as: 'facultyProfile' }
+        { model: Department, as: 'department' }
       ]
     });
 
@@ -64,17 +63,12 @@ export const authenticateToken = async (req, res, next) => {
     }
 
     if (user.active === false || user.active === 0) {
+      const isFaculty = user.role?.name?.toUpperCase() === 'FACULTY';
       return res.status(401).json({
         success: false,
-        message: 'Account is inactive. Please contact administrator.'
-      });
-    }
-
-    // If user has a faculty profile, check faculty status
-    if (user.facultyProfile && user.facultyProfile.status === 'INACTIVE') {
-      return res.status(401).json({
-        success: false,
-        message: 'Faculty account is deactivated. Please contact administrator.'
+        message: isFaculty
+          ? 'Faculty account is deactivated. Please contact administrator.'
+          : 'Account is inactive. Please contact administrator.'
       });
     }
 
@@ -90,13 +84,13 @@ export const authenticateToken = async (req, res, next) => {
       email: user.email,
       role_id: user.role_id,
       role: roleName,
-      department_id: user.department_id || user.facultyProfile?.department_id,
+      department_id: user.department_id || null,
       department: user.department?.name || 'Central Store',
-      designation: user.facultyProfile?.designation || null,
-      employeeCode: user.facultyProfile?.employee_code || null,
-      phone: user.facultyProfile?.phone || null,
+      designation: roleName === 'FACULTY' ? 'Faculty' : 'Administrator',
+      employeeCode: user.username.toUpperCase(),
+      phone: null,
       avatarText: user.avatar_text || user.name.charAt(0).toUpperCase(),
-      active: user.active
+      active: Boolean(user.active)
     };
 
     next();

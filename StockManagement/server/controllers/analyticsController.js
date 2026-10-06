@@ -3,7 +3,6 @@ import { formatProduct, formatStockTransaction, formatIndent } from '../utils/fo
 import { Op } from 'sequelize';
 
 // @desc    Get dashboard summary metrics and statistics
-// @route   GET /api/dashboard & GET /api/analytics/dashboard
 export const getDashboardStats = async (req, res, next) => {
   try {
     const todayStr = new Date().toISOString().split('T')[0];
@@ -14,13 +13,13 @@ export const getDashboardStats = async (req, res, next) => {
       totalCategories,
       totalPurchases,
       totalTransfers,
-      pendingIndentCount
+      totalManualIndents
     ] = await Promise.all([
       Product.count({ where: { active: true } }),
       Category.count({ where: { active: true } }),
       Purchase.count(),
       Transfer.count(),
-      Indent.count({ where: { status: { [Op.in]: ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'RECOMMENDED'] } } })
+      Indent.count()
     ]);
 
     const products = await Product.findAll({
@@ -53,37 +52,7 @@ export const getDashboardStats = async (req, res, next) => {
     });
     const recentTransactions = recentTransactionsRaw.map(formatStockTransaction);
 
-    // Faculty role-specific metrics
-    let facultyStats = null;
-    let indentWhere = {};
-    const isFacultyUser = req.user && req.user.role?.toUpperCase() === 'FACULTY';
-    if (isFacultyUser) {
-      const allowedRequesterIds = [req.user.id];
-      if (req.user.facultyId) {
-        allowedRequesterIds.push(req.user.facultyId);
-      }
-      indentWhere = { requested_by: { [Op.in]: allowedRequesterIds } };
-
-      const [myTotalRequests, myPendingRequests, myApprovedRequests, myRejectedRequests, myCompletedRequests] = await Promise.all([
-        Indent.count({ where: indentWhere }),
-        Indent.count({ where: { ...indentWhere, status: { [Op.in]: ['SUBMITTED', 'PENDING', 'UNDER_REVIEW', 'RECOMMENDED', 'DRAFT'] } } }),
-        Indent.count({ where: { ...indentWhere, status: { [Op.in]: ['APPROVED', 'PARTIALLY_APPROVED'] } } }),
-        Indent.count({ where: { ...indentWhere, status: 'REJECTED' } }),
-        Indent.count({ where: { ...indentWhere, status: { [Op.in]: ['COMPLETED', 'ISSUED'] } } })
-      ]);
-
-      facultyStats = {
-        myTotalRequests,
-        myPendingRequests,
-        myApprovedRequests,
-        myRejectedRequests,
-        myCompletedRequests,
-        availableCatalogCount: totalProducts
-      };
-    }
-
     const recentIndentsRaw = await Indent.findAll({
-      where: indentWhere,
       include: [
         { model: Department, as: 'department' },
         { model: User, as: 'requester' },
@@ -106,13 +75,13 @@ export const getDashboardStats = async (req, res, next) => {
       lowStockCount,
       totalPurchases,
       totalTransfers,
-      pendingIndentCount,
+      totalManualIndents,
+      manualIndents: totalManualIndents,
       recentTransactions: req.user?.role === 'ADMIN' ? recentTransactions : [],
       recentActivity: req.user?.role === 'ADMIN' ? recentTransactions : [],
       lowStockProducts: req.user?.role === 'ADMIN' ? lowStockProducts : [],
       lowStockItems: req.user?.role === 'ADMIN' ? lowStockProducts.slice(0, 5) : [],
       recentIndents,
-      facultyStats,
       stats: {
         totalProducts,
         totalCategories,
@@ -123,15 +92,11 @@ export const getDashboardStats = async (req, res, next) => {
         transfers: totalTransfers,
         totalPurchases,
         totalTransfers,
-        pendingIndents: pendingIndentCount,
-        pendingIndentCount,
+        totalManualIndents,
+        manualIndents: totalManualIndents,
+        indentsRecorded: totalManualIndents,
         todayPurchased,
-        todayTransferred,
-        myTotalRequests: facultyStats?.myTotalRequests || 0,
-        myPendingRequests: facultyStats?.myPendingRequests || 0,
-        myApprovedRequests: facultyStats?.myApprovedRequests || 0,
-        myRejectedRequests: facultyStats?.myRejectedRequests || 0,
-        myCompletedRequests: facultyStats?.myCompletedRequests || 0
+        todayTransferred
       }
     });
   } catch (error) {

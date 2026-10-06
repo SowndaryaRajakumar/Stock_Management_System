@@ -28,7 +28,7 @@ export const Dashboard = () => {
       setLoading(true);
       setError('');
       const res = await analyticsApi.getDashboardStats(currentSystem);
-      if (res.success) {
+      if (res?.success) {
         setData(res);
       }
     } catch (err) {
@@ -58,9 +58,95 @@ export const Dashboard = () => {
   const recentIndents = data?.recentIndents || [];
 
   // ==========================================
-  // FACULTY DASHBOARD VIEW
+  // 1. ELECTRICAL FACULTY DASHBOARD VIEW (NO ONLINE REQUISITIONS)
   // ==========================================
-  if (!isAdmin) {
+  if (isElectrical && !isAdmin) {
+    return (
+      <Layout title="Electrical Stock – Overview" breadcrumb="Overview of Electrical Consumables & Stock Levels">
+        {error && (
+          <div className="login-error-box" style={{ marginBottom: '18px' }}>
+            ⚠ {error}
+          </div>
+        )}
+
+        {/* Welcome Banner */}
+        <div
+          className="card card-pad"
+          style={{
+            marginBottom: '22px',
+            background: 'linear-gradient(135deg, #1e293b 0%, #0f766e 100%)',
+            color: 'var(--white)'
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ color: 'var(--white)', fontSize: '1.25rem', marginBottom: '4px' }}>
+                Electrical Stock System
+              </h2>
+              <p style={{ color: '#ccfbf1', margin: 0, fontSize: '0.86rem' }}>
+                Welcome, {user?.name || 'Faculty Member'} · Department of {user?.department || 'Engineering'}
+              </p>
+            </div>
+            <div
+              style={{
+                background: 'rgba(255,255,255,0.15)',
+                padding: '8px 14px',
+                borderRadius: '6px',
+                fontSize: '0.82rem',
+                color: 'white'
+              }}
+            >
+              📋 Physical Indent Requisition: Submit manual material slips directly to the Electrical Store.
+            </div>
+          </div>
+        </div>
+
+        {/* Store Inventory Metrics Overview */}
+        <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '24px' }}>
+          <StatCard
+            label="Total Products"
+            figure={stats.totalProducts || 0}
+            icon="▦"
+            variant="blue"
+          />
+          <StatCard
+            label="Categories"
+            figure={stats.totalCategories || 0}
+            icon="🏷"
+            variant="blue"
+          />
+          <StatCard
+            label="Total Store Stock"
+            figure={(stats.currentStock || stats.totalCurrentStock || 0).toLocaleString()}
+            icon="✓"
+            variant="green"
+          />
+          <StatCard
+            label="Stock Status"
+            figure={(stats.lowStockCount || 0) > 0 ? `${stats.lowStockCount} Low` : 'Healthy'}
+            icon={(stats.lowStockCount || 0) > 0 ? '⚠' : '✓'}
+            variant={(stats.lowStockCount || 0) > 0 ? 'amber' : 'green'}
+          />
+        </div>
+
+        {/* Notice Card */}
+        <div className="card" style={{ padding: '24px', textAlign: 'center' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '10px' }}>⚡</div>
+          <h3 style={{ fontSize: '1.1rem', color: 'var(--navy-900)', marginBottom: '8px' }}>
+            Electrical Consumables Store Management
+          </h3>
+          <p style={{ color: 'var(--text-600)', fontSize: '0.88rem', maxWidth: '600px', margin: '0 auto 16px auto', lineHeight: 1.6 }}>
+            Electrical stock operates via offline manual requisition. For material requests, please submit a signed physical indent slip to the Electrical Store keeper. The store administrator records received indents directly into the system register.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ==========================================
+  // 2. COMPUTER HARDWARE FACULTY DASHBOARD VIEW (ONLINE REQUISITIONS)
+  // ==========================================
+  if (!isElectrical && !isAdmin) {
     const myTotal = facultyStats.myTotalRequests !== undefined ? facultyStats.myTotalRequests : (stats.myTotalRequests || 0);
     const myPending = facultyStats.myPendingRequests !== undefined ? facultyStats.myPendingRequests : (stats.myPendingRequests || 0);
     const myApproved = facultyStats.myApprovedRequests !== undefined ? facultyStats.myApprovedRequests : (stats.myApprovedRequests || 0);
@@ -221,7 +307,7 @@ export const Dashboard = () => {
   }
 
   // ==========================================
-  // ADMIN DASHBOARD VIEW
+  // 3. ADMIN DASHBOARD VIEW (ELECTRICAL vs COMPUTER HARDWARE)
   // ==========================================
   const totalProducts = stats.totalProducts || 0;
   const totalCategories = stats.totalCategories || 0;
@@ -229,6 +315,9 @@ export const Dashboard = () => {
   const lowStockCount = stats.lowStockCount || 0;
   const purchasesCount = stats.purchases !== undefined ? stats.purchases : (stats.totalPurchases || 0);
   const transfersCount = stats.transfers !== undefined ? stats.transfers : (stats.totalTransfers || 0);
+
+  // Electrical uses totalManualIndents; Hardware uses pendingIndents
+  const indentsRecordedCount = stats.manualIndents !== undefined ? stats.manualIndents : (stats.totalManualIndents || stats.indentsRecorded || recentIndents.length || 0);
   const pendingIndents = stats.pendingIndents !== undefined ? stats.pendingIndents : (stats.pendingIndentCount || 0);
 
   return (
@@ -243,7 +332,7 @@ export const Dashboard = () => {
       )}
 
       {/* 7 Summary Cards */}
-      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: '24px' }}>
+      <div className="stat-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', marginBottom: '24px' }}>
         <StatCard
           label="Total Products"
           figure={totalProducts}
@@ -286,13 +375,25 @@ export const Dashboard = () => {
           variant="amber"
           onClick={() => navigate(`/${activeSystem || 'hardware'}/transfers`)}
         />
-        <StatCard
-          label="Pending Indents"
-          figure={pendingIndents}
-          icon="📋"
-          variant="amber"
-          onClick={() => navigate(`/${activeSystem || 'hardware'}/indents`)}
-        />
+
+        {/* 7th Card: Manual Indents Recorded for Electrical vs Pending Indents for Hardware */}
+        {isElectrical ? (
+          <StatCard
+            label="Manual Indents"
+            figure={indentsRecordedCount}
+            icon="📋"
+            variant="blue"
+            onClick={() => navigate(`/${activeSystem || 'electrical'}/indents`)}
+          />
+        ) : (
+          <StatCard
+            label="Pending Indents"
+            figure={pendingIndents}
+            icon="📋"
+            variant="amber"
+            onClick={() => navigate(`/${activeSystem || 'hardware'}/indents`)}
+          />
+        )}
       </div>
 
       <div className="grid-2">
@@ -354,65 +455,122 @@ export const Dashboard = () => {
           </div>
         </div>
 
-        {/* Pending / Recent Faculty Indents */}
-        <div className="section">
-          <div className="section-head">
-            <h2>Pending Requisition Indents</h2>
-            <Link to={`/${activeSystem || 'hardware'}/indents`} className="link-subtle">
-              Manage Indents →
-            </Link>
-          </div>
+        {/* ELECTRICAL: Recent Manual Indents Recorded Panel */}
+        {isElectrical && (
+          <div className="section">
+            <div className="section-head">
+              <h2>Recent Manual Indents Recorded</h2>
+              <Link to={`/${activeSystem || 'electrical'}/indents`} className="link-subtle">
+                View Indent Register →
+              </Link>
+            </div>
 
-          <div className="card">
-            {recentIndents.length === 0 ? (
-              <div className="card-pad" style={{ textAlign: 'center' }}>
-                <EmptyState
-                  icon="▧"
-                  title="No Pending Indents"
-                  description="No material requests are currently awaiting store approval."
-                />
-              </div>
-            ) : (
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Indent No.</th>
-                      <th>Department</th>
-                      <th>Requester</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recentIndents.map((indent) => (
-                      <tr key={indent._id || indent.id}>
-                        <td className="code" style={{ fontWeight: 700 }}>
-                          <Link to={`/${activeSystem || 'hardware'}/indents/${indent._id || indent.id}`}>
-                            {indent.indentNumber}
-                          </Link>
-                        </td>
-                        <td>{indent.department}</td>
-                        <td>{indent.requesterName}</td>
-                        <td>
-                          <StatusBadge status={indent.status} />
-                        </td>
-                        <td>
-                          <Link
-                            to={`/${activeSystem || 'hardware'}/indents/${indent._id || indent.id}`}
-                            className="btn-outline btn-sm"
-                          >
-                            Review →
-                          </Link>
-                        </td>
+            <div className="card">
+              {recentIndents.length === 0 ? (
+                <div className="card-pad" style={{ textAlign: 'center' }}>
+                  <EmptyState
+                    icon="📋"
+                    title="No Indents Recorded"
+                    description="No manual material requests have been logged in the register yet."
+                  />
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Indent No.</th>
+                        <th>Department</th>
+                        <th>Requester</th>
+                        <th>Purpose / Item</th>
+                        <th>Date</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                    </thead>
+                    <tbody>
+                      {recentIndents.map((indent) => (
+                        <tr key={indent._id || indent.id}>
+                          <td className="code" style={{ fontWeight: 700, color: 'var(--blue-700)' }}>
+                            {indent.indentNumber}
+                          </td>
+                          <td>{indent.department}</td>
+                          <td><strong>{indent.requestedBy || indent.requesterName}</strong></td>
+                          <td style={{ maxWidth: '160px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {indent.items?.[0]?.productName || indent.purpose || '—'}
+                          </td>
+                          <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                            {indent.date || indent.requestDate || (indent.created_at ? new Date(indent.created_at).toISOString().split('T')[0] : '—')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* HARDWARE: Pending Requisition Indents Panel */}
+        {!isElectrical && (
+          <div className="section">
+            <div className="section-head">
+              <h2>Pending Requisition Indents</h2>
+              <Link to={`/${activeSystem || 'hardware'}/indents`} className="link-subtle">
+                Manage Indents →
+              </Link>
+            </div>
+
+            <div className="card">
+              {recentIndents.length === 0 ? (
+                <div className="card-pad" style={{ textAlign: 'center' }}>
+                  <EmptyState
+                    icon="▧"
+                    title="No Pending Indents"
+                    description="No material requests are currently awaiting store approval."
+                  />
+                </div>
+              ) : (
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Indent No.</th>
+                        <th>Department</th>
+                        <th>Requester</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {recentIndents.map((indent) => (
+                        <tr key={indent._id || indent.id}>
+                          <td className="code" style={{ fontWeight: 700 }}>
+                            <Link to={`/${activeSystem || 'hardware'}/indents/${indent._id || indent.id}`}>
+                              {indent.indentNumber}
+                            </Link>
+                          </td>
+                          <td>{indent.department}</td>
+                          <td>{indent.requesterName}</td>
+                          <td>
+                            <StatusBadge status={indent.status} />
+                          </td>
+                          <td>
+                            <Link
+                              to={`/${activeSystem || 'hardware'}/indents/${indent._id || indent.id}`}
+                              className="btn-outline btn-sm"
+                            >
+                              Review →
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

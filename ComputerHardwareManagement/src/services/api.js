@@ -331,6 +331,10 @@ export const indentApi = {
     const res = await api.put(`/indents/${id}`, indentData);
     return res.data;
   },
+  deleteIndent: async (id) => {
+    const res = await api.delete(`/indents/${id}`);
+    return res.data;
+  },
   submitIndent: async (id) => {
     const res = await api.post(`/indents/${id}/submit`);
     return res.data;

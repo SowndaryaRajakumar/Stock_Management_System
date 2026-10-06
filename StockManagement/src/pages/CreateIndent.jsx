@@ -8,7 +8,7 @@ import { useNotifications } from '../context/NotificationContext';
 import Loading from '../components/common/Loading';
 
 export const CreateIndent = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { fetchNotifications } = useNotifications();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -335,9 +335,9 @@ export const CreateIndent = () => {
                 <table>
                   <thead>
                     <tr>
-                      <th style={{ width: '40%' }}>Product Selection</th>
+                      <th style={{ width: isAdmin ? '40%' : '45%' }}>Product Selection</th>
                       <th>Register</th>
-                      <th>Available in Store</th>
+                      {isAdmin && <th>Available in Store</th>}
                       <th>Requested Quantity</th>
                       <th>Unit</th>
                       <th style={{ width: '40px' }}></th>
@@ -356,7 +356,7 @@ export const CreateIndent = () => {
                             <option value="">-- Choose Product --</option>
                             {products.map((p) => (
                               <option key={p._id} value={p._id}>
-                                [{p.productCode}] {p.productName} ({p.currentQuantity} {p.unit} in store)
+                                [{p.productCode}] {p.productName}
                               </option>
                             ))}
                           </select>
@@ -364,16 +364,18 @@ export const CreateIndent = () => {
                         <td>
                           <span className="badge badge-blue">{item.stockRegister || 'SR1'}</span>
                         </td>
-                        <td>
-                          <span
-                            style={{
-                              fontWeight: 700,
-                              color: item.availableStock === 0 ? 'var(--red-600)' : 'inherit'
-                            }}
-                          >
-                            {item.availableStock}
-                          </span>
-                        </td>
+                        {isAdmin && (
+                          <td>
+                            <span
+                              style={{
+                                fontWeight: 700,
+                                color: item.availableStock === 0 ? 'var(--red-600)' : 'inherit'
+                              }}
+                            >
+                              {item.availableStock}
+                            </span>
+                          </td>
+                        )}
                         <td style={{ width: '130px' }}>
                           <input
                             type="number"

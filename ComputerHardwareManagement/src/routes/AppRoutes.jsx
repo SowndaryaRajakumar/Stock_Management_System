@@ -29,11 +29,14 @@ import ManageIndents from '../pages/ManageIndents';
 import Notifications from '../pages/Notifications';
 import Faculty from '../pages/Faculty';
 import Departments from '../pages/Departments';
+import ElectricalIndentRegister from '../pages/ElectricalIndentRegister';
 
 /**
  * Reusable full-suite router for either Electrical or Hardware subsystem
  */
 const SubsystemSuite = ({ system }) => {
+  const isElectrical = system === 'electrical';
+
   return (
     <SystemRoute requiredSystem={system}>
       <Routes>
@@ -47,18 +50,85 @@ const SubsystemSuite = ({ system }) => {
           }
         />
 
-        {/* Faculty Dedicated Catalog & Requisitions */}
-        <Route
-          path="faculty/catalog"
-          element={
-            <ProtectedRoute>
-              <FacultyCatalog />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="catalog" element={<Navigate to="faculty/catalog" replace />} />
-        <Route path="faculty/requests" element={<Navigate to="../indents/my" replace />} />
-        <Route path="faculty/dashboard" element={<Navigate to="dashboard" replace />} />
+        {/* Hardware-Only Faculty Dedicated Catalog & Requisitions */}
+        {!isElectrical && (
+          <>
+            <Route
+              path="faculty/catalog"
+              element={
+                <ProtectedRoute>
+                  <FacultyCatalog />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="catalog" element={<Navigate to="faculty/catalog" replace />} />
+            <Route path="faculty/requests" element={<Navigate to="../indents/my" replace />} />
+            <Route path="faculty/dashboard" element={<Navigate to="dashboard" replace />} />
+
+            {/* Faculty My Indents: Distinct Faculty Route */}
+            <Route
+              path="indents/my"
+              element={
+                <ProtectedRoute>
+                  <FacultyRequests />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Create Indent: Distinct Faculty Route */}
+            <Route
+              path="indents/create"
+              element={
+                <ProtectedRoute>
+                  <CreateIndent />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Indent Details Route */}
+            <Route
+              path="indents/:id"
+              element={
+                <ProtectedRoute>
+                  <IndentDetails />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin Manage Indents: ADMIN ONLY (/hardware/indents) */}
+            <Route
+              path="indents"
+              element={
+                <RoleRoute requireAdmin={true}>
+                  <ManageIndents />
+                </RoleRoute>
+              }
+            />
+            <Route path="manage-indents" element={<Navigate to="../indents" replace />} />
+          </>
+        )}
+
+        {/* Electrical-Only Manual Indent Register */}
+        {isElectrical && (
+          <>
+            <Route
+              path="indents"
+              element={
+                <RoleRoute requireAdmin={true}>
+                  <ElectricalIndentRegister />
+                </RoleRoute>
+              }
+            />
+            <Route path="indent-register" element={<Navigate to="../indents" replace />} />
+            <Route path="manage-indents" element={<Navigate to="../indents" replace />} />
+            {/* Guard against online requisition routes for Electrical */}
+            <Route path="indents/create" element={<Navigate to="../indents" replace />} />
+            <Route path="indents/my" element={<Navigate to="../indents" replace />} />
+            <Route path="faculty/catalog" element={<Navigate to="../dashboard" replace />} />
+            <Route path="catalog" element={<Navigate to="../dashboard" replace />} />
+            <Route path="faculty/requests" element={<Navigate to="../dashboard" replace />} />
+          </>
+        )}
 
         {/* Admin Route Aliases */}
         <Route path="admin/dashboard" element={<Navigate to="dashboard" replace />} />
@@ -102,46 +172,6 @@ const SubsystemSuite = ({ system }) => {
           }
         />
 
-        {/* Faculty My Indents: Distinct Faculty Route */}
-        <Route
-          path="indents/my"
-          element={
-            <ProtectedRoute>
-              <FacultyRequests />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Create Indent: Distinct Faculty Route */}
-        <Route
-          path="indents/create"
-          element={
-            <ProtectedRoute>
-              <CreateIndent />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Indent Details Route */}
-        <Route
-          path="indents/:id"
-          element={
-            <ProtectedRoute>
-              <IndentDetails />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Admin Manage Indents: ADMIN ONLY (/hardware/indents) */}
-        <Route
-          path="indents"
-          element={
-            <RoleRoute requireAdmin={true}>
-              <ManageIndents />
-            </RoleRoute>
-          }
-        />
-        <Route path="manage-indents" element={<Navigate to="../indents" replace />} />
         <Route
           path="notifications"
           element={
@@ -262,11 +292,15 @@ const SubsystemSuite = ({ system }) => {
  * Helper to dynamically redirect un-prefixed links to the active subsystem
  */
 const SystemRedirect = ({ target }) => {
-  const { activeSystem } = useSystem();
+  const { activeSystem, isElectrical } = useSystem();
   const { isAdmin } = useAuth();
   const system = activeSystem || localStorage.getItem('stock_active_system') || 'hardware';
-  if (target === 'indents' && !isAdmin) {
-    return <Navigate to={`/${system}/indents/my`} replace />;
+  
+  if (target === 'indents') {
+    if (system === 'electrical' || isElectrical) {
+      return <Navigate to="/electrical/indents" replace />;
+    }
+    return isAdmin ? <Navigate to="/hardware/indents" replace /> : <Navigate to="/hardware/indents/my" replace />;
   }
   if (target === 'manage-indents') {
     return <Navigate to={`/${system}/indents`} replace />;

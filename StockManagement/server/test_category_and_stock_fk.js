@@ -9,7 +9,8 @@ import axios from 'axios';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret123';
-const BASE_URL = 'http://localhost:5050/api';
+const PORT = process.env.PORT || 5051;
+const BASE_URL = `http://localhost:${PORT}/api`;
 
 async function runTests() {
   console.log('=== STARTING CATEGORY & STOCK REGISTER FK TESTS ===');

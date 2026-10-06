@@ -8,7 +8,6 @@ import {
   Purchase,
   Transfer,
   User,
-  Faculty,
   Indent,
   StockTransaction,
   sequelize
@@ -51,14 +50,8 @@ export const getDepartments = async (req, res, next) => {
       if (!deptList.length) return [];
       const deptIds = deptList.map(d => d.id);
 
-      const [userCounts, facultyCounts, indentCounts, transferCounts] = await Promise.all([
+      const [userCounts, indentCounts, transferCounts] = await Promise.all([
         User.findAll({
-          attributes: ['department_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
-          where: { department_id: deptIds },
-          group: ['department_id'],
-          raw: true
-        }),
-        Faculty.findAll({
           attributes: ['department_id', [sequelize.fn('COUNT', sequelize.col('id')), 'cnt']],
           where: { department_id: deptIds },
           group: ['department_id'],
@@ -80,9 +73,6 @@ export const getDepartments = async (req, res, next) => {
 
       const countMap = {};
       userCounts.forEach(r => {
-        countMap[r.department_id] = (countMap[r.department_id] || 0) + (parseInt(r.cnt, 10) || 0);
-      });
-      facultyCounts.forEach(r => {
         countMap[r.department_id] = (countMap[r.department_id] || 0) + (parseInt(r.cnt, 10) || 0);
       });
       indentCounts.forEach(r => {
@@ -149,13 +139,12 @@ export const getDepartmentById = async (req, res, next) => {
     if (!dept) {
       return res.status(404).json({ success: false, message: 'Department not found.' });
     }
-    const [uCount, fCount, iCount, tCount] = await Promise.all([
+    const [uCount, iCount, tCount] = await Promise.all([
       User.count({ where: { department_id: dept.id } }),
-      Faculty.count({ where: { department_id: dept.id } }),
       Indent.count({ where: { department_id: dept.id } }),
       Transfer.count({ where: { department_id: dept.id } })
     ]);
-    const usageCount = uCount + fCount + iCount + tCount;
+    const usageCount = uCount + iCount + tCount;
     const formatted = {
       ...mapWithId(dept),
       active: Boolean(dept.active),
@@ -289,13 +278,12 @@ export const updateDepartment = async (req, res, next) => {
 
     await dept.save();
 
-    const [uCount, fCount, iCount, tCount] = await Promise.all([
+    const [uCount, iCount, tCount] = await Promise.all([
       User.count({ where: { department_id: dept.id } }),
-      Faculty.count({ where: { department_id: dept.id } }),
       Indent.count({ where: { department_id: dept.id } }),
       Transfer.count({ where: { department_id: dept.id } })
     ]);
-    const usageCount = uCount + fCount + iCount + tCount;
+    const usageCount = uCount + iCount + tCount;
 
     const formatted = {
       ...mapWithId(dept),
@@ -365,15 +353,14 @@ export const deleteDepartment = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Department not found.' });
     }
 
-    // Check usage across User, Faculty, Indent, Transfer, StockTransaction
-    const [uCount, fCount, iCount, tCount, stCount] = await Promise.all([
+    // Check usage across User, Indent, Transfer, StockTransaction
+    const [uCount, iCount, tCount, stCount] = await Promise.all([
       User.count({ where: { department_id: dept.id } }),
-      Faculty.count({ where: { department_id: dept.id } }),
       Indent.count({ where: { department_id: dept.id } }),
       Transfer.count({ where: { department_id: dept.id } }),
       StockTransaction.count({ where: { department_id: dept.id } })
     ]);
-    const usageCount = uCount + fCount + iCount + tCount + stCount;
+    const usageCount = uCount + iCount + tCount + stCount;
 
     if (usageCount > 0) {
       if (isDeactivateReq) {
@@ -391,7 +378,7 @@ export const deleteDepartment = async (req, res, next) => {
         success: false,
         inUse: true,
         usageCount,
-        message: `This department is currently referenced (${usageCount} records: users, faculty, indents, or transfers) and cannot be permanently deleted. Deactivate it instead.`
+        message: `This department is currently referenced (${usageCount} records: users, indents, or transfers) and cannot be permanently deleted. Deactivate it instead.`
       });
     }
 
