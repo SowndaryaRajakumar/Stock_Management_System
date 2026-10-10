@@ -13,27 +13,27 @@ import {
   getProductRemarks,
   addProductRemark
 } from '../controllers/productController.js';
-import { protect, requireAdmin, requireStaffOrAdmin } from '../middleware/auth.js';
+import { protect, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Products CRUD
-router.get('/', protect, getProducts);
+// Products CRUD (Admin only on Electrical backend)
+router.get('/', protect, requireAdmin, getProducts);
 router.post('/', protect, requireAdmin, createProduct);
 
-router.get('/:id', protect, getProductById);
-router.get('/:id/details', protect, getProductDetails);
+router.get('/:id', protect, requireAdmin, getProductById);
+router.get('/:id/details', protect, requireAdmin, getProductDetails);
 router.put('/:id', protect, requireAdmin, updateProduct);
 router.delete('/:id', protect, requireAdmin, deleteProduct);
 
-// References
-router.get('/:id/references', protect, getProductReferences);
+// References (Admin only)
+router.get('/:id/references', protect, requireAdmin, getProductReferences);
 router.post('/:id/references', protect, requireAdmin, addProductReference);
 router.put('/:id/references/:referenceId', protect, requireAdmin, updateProductReference);
 router.delete('/:id/references/:referenceId', protect, requireAdmin, deleteProductReference);
 
-// Remarks
-router.get('/:id/remarks', protect, getProductRemarks);
-router.post('/:id/remarks', protect, requireStaffOrAdmin, addProductRemark);
+// Remarks (Admin only)
+router.get('/:id/remarks', protect, requireAdmin, getProductRemarks);
+router.post('/:id/remarks', protect, requireAdmin, addProductRemark);
 
 export default router;

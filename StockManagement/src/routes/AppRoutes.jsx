@@ -2,6 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
+import { useAuth } from '../context/AuthContext';
+import Loading from '../components/common/Loading';
 
 // Pages
 import Login from '../pages/Login';
@@ -261,10 +263,18 @@ export const AppRoutes = () => {
       />
 
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
+};
+
+const RootRedirect = () => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) {
+    return <Loading message="Authenticating session..." />;
+  }
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
 };
 
 export default AppRoutes;

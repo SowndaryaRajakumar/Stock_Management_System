@@ -15,14 +15,14 @@ export const RoleRoute = ({ children, requireAdmin = false, allowedRoles = [] })
   }
 
   if (requireAdmin && !isAdmin) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/hardware/dashboard" replace />;
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
     const userRole = user?.role ? user.role.toUpperCase() : '';
     const normalizedAllowed = allowedRoles.map(r => r.toUpperCase());
     if (!normalizedAllowed.includes(userRole)) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to={isAdmin ? "/select-system" : "/hardware/dashboard"} replace />;
     }
   }
 

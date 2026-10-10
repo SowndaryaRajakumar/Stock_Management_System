@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumables and Computer Hardware Stock Management System - Lab Record</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Times New Roman', Times, Georgia, serif;
+    background-color: #e5e5e5;
+    color: #000;
+  }
+
+  .page-container {
+    width: 210mm;
+    height: 297mm;
+    margin: 15px auto;
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    padding: 8mm;
+    position: relative;
+    page-break-after: always;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+
+  @media print {
+    body {
+      background: none;
+    }
+    .page-container {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      min-height: 280mm;
+      box-shadow: none;
+      page-break-after: always;
+      page-break-inside: avoid;
+      padding: 6mm;
+      overflow: hidden;
+    }
+  }
+
+  .border-box {
+    border: 1.5px solid #111111;
+    width: 100%;
+    height: 100%;
+    padding: 13mm 14mm 10mm 14mm;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  /* Academic Document Typography */
+  .doc-title {
+    font-size: 13.5pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 12px;
+    line-height: 1.3;
+    letter-spacing: 0.2px;
+  }
+
+  .meta-row {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+
+  .section-label {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .aim-text {
+    font-size: 10.5pt;
+    line-height: 1.35;
+    text-align: justify;
+    margin-bottom: 10px;
+  }
+
+  /* Tree / Explorer Side-by-Side */
+  .explorer-grid {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0 10px 0;
+    justify-content: space-between;
+  }
+
+  .explorer-box {
+    flex: 1;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: 'Consolas', 'Courier New', Menlo, Monaco, monospace;
+    font-size: 8pt;
+    color: #d4d4d4;
+    line-height: 1.32;
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+  }
+
+  .explorer-header {
+    font-size: 7.8pt;
+    text-transform: uppercase;
+    color: #9cdcfe;
+    font-weight: bold;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tree-folder {
+    color: #dcb67a;
+    font-weight: bold;
+  }
+
+  .tree-file-js {
+    color: #e5c07b;
+  }
+
+  .tree-file-jsx {
+    color: #61afef;
+  }
+
+  .tree-file-json {
+    color: #98c379;
+  }
+
+  .tree-file-css {
+    color: #56b6c2;
+  }
+
+  /* Code Block Styling */
+  .code-file-header {
+    font-size: 10.5pt;
+    font-weight: bold;
+    font-family: 'Times New Roman', Times, serif;
+    margin-top: 6px;
+    margin-bottom: 3px;
+  }
+
+  .code-block {
+    font-family: 'Consolas', 'Courier New', Menlo, Monaco, monospace;
+    font-size: 8.2pt;
+    line-height: 1.25;
+    color: #000000;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Output Windows */
+  .terminal-window {
+    background-color: #181818;
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 6px 0 10px 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+
+  .terminal-titlebar {
+    background-color: #2d2d2d;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #3c3c3c;
+  }
+
+  .terminal-dots {
+    display: flex;
+    gap: 5px;
+    margin-right: 12px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #27c93f; }
+
+  .terminal-title {
+    color: #999;
+    font-size: 8pt;
+    font-family: 'Consolas', 'Courier New', monospace;
+    flex-grow: 1;
+    text-align: center;
+  }
+
+  .terminal-body {
+    padding: 8px 12px;
+    font-family: 'Consolas', 'Courier New', Menlo, monospace;
+    font-size: 7.8pt;
+    line-height: 1.3;
+    color: #e0e0e0;
+  }
+
+  .term-green { color: #50fa7b; }
+  .term-cyan { color: #8be9fd; }
+  .term-yellow { color: #f1fa8c; }
+  .term-gray { color: #888888; }
+  .term-white { color: #ffffff; font-weight: bold; }
+
+  .ui-screenshot {
+    width: 100%;
+    max-height: 102mm;
+    object-fit: contain;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    display: block;
+    margin: 4px auto 6px auto;
+  }
+
+  /* Rubrics Table */
+  .rubrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    margin-bottom: 10px;
+    font-size: 8.8pt;
+  }
+
+  .rubrics-table th, .rubrics-table td {
+    border: 1px solid #111;
+    padding: 5px 3px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .rubrics-table th {
+    font-weight: bold;
+    background-color: #fbfbfb;
+    line-height: 1.2;
+  }
+
+  .rubrics-table td {
+    height: 30px;
+  }
+
+  .result-para {
+    font-size: 9.8pt;
+    line-height: 1.34;
+    text-align: justify;
+    margin-top: 3px;
+  }
+</style>
+</head>
+<body><!-- ================= PAGE 2 ================= -->
+<div class="page-container">
+  <div class="border-box">
+    <pre class="code-block">// Global Middleware
+app.use(cors({
+  origin: [
+    'http://localhost:5174', 'http://127.0.0.1:5174',
+    'http://localhost:5173', 'http://127.0.0.1:5173',
+    'http://localhost:3000', 'http://127.0.0.1:3000'
+  ],
+  credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// System Isolation &amp; Dynamic Route Normalization
+app.use((req, res, next) => {
+  // Reject hardware requests on Electrical backend (port 5050)
+  if (req.url.startsWith('/api/hardware')) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access Denied: Hardware subsystem requests cannot be served by Electrical backend.'
+    });
+  }
+  // Normalize /api/electrical/... requests to /api/...
+  if (req.url.startsWith('/api/electrical')) {
+    req.url = req.url.replace(/^\/api\/electrical/, '/api');
+  }
+  next();
+});
+
+// Health check endpoint (public)
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'OK',
+    message: 'Consumable Stock Management System Backend Active',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Auth Routes (Login is public, /me is verified via JWT)
+app.use('/api/auth', authRoutes);
+
+// Electrical Subsystem Authorization: Accessible strictly by ADMIN
+app.use('/api', protect, requireAdmin);
+
+// Core API Routes (Admin only on Electrical backend)
+app.use('/api/faculty', facultyRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/stock', stockRoutes);
+app.use('/api/departments', departmentRouter);
+app.use('/api/categories', categoryRouter);
+app.use('/api/units', unitRouter);
+app.use('/api/stock-documents', stockDocumentRouter);
+app.use('/api/indents', indentRoutes);
+
+// Dashboard direct endpoint
+app.get('/api/dashboard', getDashboardStats);
+
+// Compatibility &amp; Analytics Routes
+app.use('/api/history', stockHistoryRoutes);
+app.use('/api/stock-history', stockHistoryRoutes);
+app.use('/api/stock-transactions', stockHistoryRoutes);
+app.use('/api/purchases', purchaseRoutes);
+app.use('/api/transfers', transferRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/notifications', notificationRoutes);
+
+// Global error handling middleware
+app.use(errorHandler);
+
+export default app;</pre>
+  </div></div></body></html>

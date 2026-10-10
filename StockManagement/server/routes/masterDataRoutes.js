@@ -28,32 +28,32 @@ import {
 import { protect, requireAdmin } from '../middleware/auth.js';
 
 export const departmentRouter = express.Router();
-departmentRouter.get('/', protect, getDepartments);
-departmentRouter.get('/:id', protect, getDepartmentById);
+departmentRouter.get('/', protect, requireAdmin, getDepartments);
+departmentRouter.get('/:id', protect, requireAdmin, getDepartmentById);
 departmentRouter.post('/', protect, requireAdmin, createDepartment);
 departmentRouter.put('/:id', protect, requireAdmin, updateDepartment);
 departmentRouter.patch('/:id/status', protect, requireAdmin, updateDepartmentStatus);
 departmentRouter.delete('/:id', protect, requireAdmin, deleteDepartment);
 
 export const categoryRouter = express.Router();
-categoryRouter.get('/', protect, getCategories);
-categoryRouter.get('/:id', protect, getCategoryById);
+categoryRouter.get('/', protect, requireAdmin, getCategories);
+categoryRouter.get('/:id', protect, requireAdmin, getCategoryById);
 categoryRouter.post('/', protect, requireAdmin, createCategory);
 categoryRouter.put('/:id', protect, requireAdmin, updateCategory);
 categoryRouter.patch('/:id/status', protect, requireAdmin, updateCategoryStatus);
 categoryRouter.delete('/:id', protect, requireAdmin, deleteCategory);
 
 export const unitRouter = express.Router();
-unitRouter.get('/', protect, getUnits);
-unitRouter.get('/:id', protect, getUnitById);
+unitRouter.get('/', protect, requireAdmin, getUnits);
+unitRouter.get('/:id', protect, requireAdmin, getUnitById);
 unitRouter.post('/', protect, requireAdmin, createUnit);
 unitRouter.put('/:id', protect, requireAdmin, updateUnit);
 unitRouter.patch('/:id/status', protect, requireAdmin, updateUnitStatus);
 unitRouter.delete('/:id', protect, requireAdmin, deleteUnit);
 
 export const stockDocumentRouter = express.Router();
-stockDocumentRouter.get('/', protect, getStockDocuments);
-stockDocumentRouter.get('/:id', protect, getStockDocumentById);
+stockDocumentRouter.get('/', protect, requireAdmin, getStockDocuments);
+stockDocumentRouter.get('/:id', protect, requireAdmin, getStockDocumentById);
 stockDocumentRouter.post('/', protect, requireAdmin, createStockDocument);
 stockDocumentRouter.put('/:id', protect, requireAdmin, updateStockDocument);
 stockDocumentRouter.patch('/:id/status', protect, requireAdmin, updateStockDocumentStatus);

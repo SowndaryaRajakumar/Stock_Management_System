@@ -57,3 +57,8 @@ target/
 *.key
 serviceAccountKey.json
 firebase-adminsdk-*.json
+
+Electrical_and_Computer_Hardware_Stock_Management_System_Project_Report.docx
+UML_Diagrams/
+scratch/
+generate_lab_record_pdf.js

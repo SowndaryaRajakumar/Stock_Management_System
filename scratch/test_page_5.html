@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Consumables and Computer Hardware Stock Management System - Lab Record</title>
+<style>
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
+  * {
+    box-sizing: border-box;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Times New Roman', Times, Georgia, serif;
+    background-color: #f4f4f4;
+    color: #000;
+  }
+
+  .page-container {
+    width: 210mm;
+    height: 297mm;
+    margin: 15px auto;
+    background: #ffffff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    padding: 8mm;
+    position: relative;
+    page-break-after: always;
+    page-break-inside: avoid;
+    overflow: hidden;
+  }
+
+  @media print {
+    body {
+      background: none;
+    }
+    .page-container {
+      margin: 0;
+      width: 100%;
+      height: 100vh;
+      min-height: 280mm;
+      box-shadow: none;
+      page-break-after: always;
+      page-break-inside: avoid;
+      padding: 6mm;
+      overflow: hidden;
+    }
+  }
+
+  .border-box {
+    border: 1.5px solid #111111;
+    width: 100%;
+    height: 100%;
+    padding: 12mm 14mm 10mm 14mm;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+  }
+
+  /* Academic Document Typography */
+  .doc-title {
+    font-size: 13.5pt;
+    font-weight: bold;
+    text-align: center;
+    margin-bottom: 12px;
+    line-height: 1.3;
+    letter-spacing: 0.2px;
+  }
+
+  .meta-row {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-bottom: 5px;
+    line-height: 1.3;
+  }
+
+  .section-label {
+    font-size: 11pt;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+
+  .aim-text {
+    font-size: 10.5pt;
+    line-height: 1.35;
+    text-align: justify;
+    margin-bottom: 10px;
+  }
+
+  /* Tree / Explorer Side-by-Side */
+  .explorer-grid {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0 10px 0;
+    justify-content: space-between;
+  }
+
+  .explorer-box {
+    flex: 1;
+    background-color: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-family: 'Consolas', 'Courier New', Menlo, Monaco, monospace;
+    font-size: 7.8pt;
+    color: #d4d4d4;
+    line-height: 1.32;
+    box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+  }
+
+  .explorer-header {
+    font-size: 7.8pt;
+    text-transform: uppercase;
+    color: #9cdcfe;
+    font-weight: bold;
+    margin-bottom: 5px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .tree-folder {
+    color: #dcb67a;
+    font-weight: bold;
+  }
+
+  .tree-file-js {
+    color: #e5c07b;
+  }
+
+  .tree-file-jsx {
+    color: #61afef;
+  }
+
+  .tree-file-json {
+    color: #98c379;
+  }
+
+  .tree-file-css {
+    color: #56b6c2;
+  }
+
+  /* Code Block Styling */
+  .code-file-header {
+    font-size: 10.5pt;
+    font-weight: bold;
+    font-family: 'Times New Roman', Times, serif;
+    margin-top: 6px;
+    margin-bottom: 3px;
+  }
+
+  .code-block {
+    font-family: 'Consolas', 'Courier New', Menlo, Monaco, monospace;
+    font-size: 8.1pt;
+    line-height: 1.24;
+    color: #000000;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Output Windows */
+  .terminal-window {
+    background-color: #181818;
+    border: 1px solid #333;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 6px 0 10px 0;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+
+  .terminal-titlebar {
+    background-color: #2d2d2d;
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #3c3c3c;
+  }
+
+  .terminal-dots {
+    display: flex;
+    gap: 5px;
+    margin-right: 12px;
+  }
+
+  .dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+  }
+
+  .dot-red { background: #ff5f56; }
+  .dot-yellow { background: #ffbd2e; }
+  .dot-green { background: #27c93f; }
+
+  .terminal-title {
+    color: #999;
+    font-size: 8pt;
+    font-family: 'Consolas', 'Courier New', monospace;
+    flex-grow: 1;
+    text-align: center;
+  }
+
+  .terminal-body {
+    padding: 8px 12px;
+    font-family: 'Consolas', 'Courier New', Menlo, monospace;
+    font-size: 7.8pt;
+    line-height: 1.3;
+    color: #e0e0e0;
+  }
+
+  .term-green { color: #50fa7b; }
+  .term-cyan { color: #8be9fd; }
+  .term-yellow { color: #f1fa8c; }
+  .term-gray { color: #888888; }
+  .term-white { color: #ffffff; font-weight: bold; }
+
+  .ui-screenshot {
+    width: 100%;
+    max-height: 102mm;
+    object-fit: contain;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    display: block;
+    margin: 4px auto 6px auto;
+  }
+
+  /* Rubrics Table */
+  .rubrics-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    margin-bottom: 10px;
+    font-size: 8.8pt;
+  }
+
+  .rubrics-table th, .rubrics-table td {
+    border: 1px solid #111;
+    padding: 5px 3px;
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .rubrics-table th {
+    font-weight: bold;
+    background-color: #fbfbfb;
+    line-height: 1.2;
+  }
+
+  .rubrics-table td {
+    height: 30px;
+  }
+
+  .result-para {
+    font-size: 9.8pt;
+    line-height: 1.34;
+    text-align: justify;
+    margin-top: 3px;
+  }
+</style>
+</head>
+<body><!-- ================= PAGE 5 ================= -->
+<div class="page-container">
+  <div class="border-box">
+    <div class="code-file-header">backend/middleware/authorizeRole.js</div>
+    <pre class="code-block">export const requireRole = (...allowedRoles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Authentication required.' });
+    }
+    const userRole = req.user.role ? req.user.role.toUpperCase() : '';
+    const normalizedAllowed = allowedRoles.map(r => r.toUpperCase());
+
+    if (normalizedAllowed.includes(userRole)) {
+      return next();
+    }
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied. Role "' + userRole + '" is not authorized for this resource.'
+    });
+  };
+};
+
+export const requireAdmin = requireRole('ADMIN');
+export const requireFaculty = requireRole('FACULTY');
+export const requireFacultyOrAdmin = requireRole('ADMIN', 'FACULTY');</pre>
+
+    <div class="code-file-header" style="margin-top: 10px;">backend/controllers/productController.js (Excerpt)</div>
+    <pre class="code-block">export const getProducts = async (req, res, next) => {
+  try {
+    const { search, category, register, status, lowStock, page, limit } = req.query;
+    const where = {};
+
+    if (search) {
+      where[Op.or] = [
+        { product_name: { [Op.like]: '%' + search.trim() + '%' } },
+        { product_code: { [Op.like]: '%' + search.trim() + '%' } },
+        { '$category.name$': { [Op.like]: '%' + search.trim() + '%' } }
+      ];
+    }
+
+    if (category &amp;&amp; category !== 'ALL') where['$category.name$'] = category.trim();
+    if (register &amp;&amp; register !== 'ALL') where['$stockDocument.document_code$'] = register.trim();
+
+    if (req.user &amp;&amp; req.user.role === 'FACULTY') {
+      where.active = true;
+    } else if (status &amp;&amp; status !== 'ALL') {
+      where.active = (status === 'ACTIVE');
+    }
+
+    let rows = await Product.findAll({ where, include: PRODUCT_INCLUDES, order: [['product_name', 'ASC']] });
+    let formattedProducts = rows.map(formatProduct);
+
+    if (lowStock === 'true') {
+      formattedProducts = formattedProducts.filter(p => p.isLowStock);
+    }
+
+    const total = formattedProducts.length;
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const pageSize = Math.max(1, parseInt(limit, 10) || 10);
+    const startIndex = (pageNum - 1) * pageSize;
+    const paginated = formattedProducts.slice(startIndex, startIndex + pageSize);
+
+    return res.json({
+      success: true,
+      count: paginated.length,
+      total,
+      page: pageNum,
+      totalPages: Math.ceil(total / pageSize),
+      products: paginated
+    });
+  } catch (error) {
+    next(error);
+  }
+};</pre>
+  </div></div></body></html>

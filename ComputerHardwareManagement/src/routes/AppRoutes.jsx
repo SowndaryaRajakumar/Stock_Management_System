@@ -4,6 +4,7 @@ import RoleRoute from './RoleRoute';
 import SystemRoute from './SystemRoute';
 import { useSystem } from '../context/SystemContext';
 import { useAuth } from '../context/AuthContext';
+import Loading from '../components/common/Loading';
 
 // Pages
 import Login from '../pages/Login';
@@ -289,36 +290,96 @@ const SubsystemSuite = ({ system }) => {
 };
 
 /**
+ * Root route handler:
+ * - If not authenticated -> go directly to /login
+ * - If authenticated Admin -> go to /select-system (or active system dashboard if set)
+ * - If authenticated Faculty -> go to /hardware/dashboard
+ */
+const RootRedirect = () => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  const { activeSystem } = useSystem();
+
+  if (loading) {
+    return <Loading message="Authenticating session..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (isAdmin) {
+    if (activeSystem === 'electrical') {
+      return <Navigate to="/electrical/dashboard" replace />;
+    }
+    if (activeSystem === 'hardware') {
+      return <Navigate to="/hardware/dashboard" replace />;
+    }
+    return <Navigate to="/select-system" replace />;
+  }
+
+  return <Navigate to="/hardware/dashboard" replace />;
+};
+
+/**
  * Helper to dynamically redirect un-prefixed links to the active subsystem
  */
 const SystemRedirect = ({ target }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const { activeSystem, isElectrical } = useSystem();
-  const { isAdmin } = useAuth();
-  const system = activeSystem || localStorage.getItem('stock_active_system') || 'hardware';
+
+  if (loading) {
+    return <Loading message="Authenticating session..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const system = !isAdmin ? 'hardware' : (activeSystem || localStorage.getItem('stock_active_system') || 'hardware');
   
   if (target === 'indents') {
-    if (system === 'electrical' || isElectrical) {
+    if ((system === 'electrical' || isElectrical) && isAdmin) {
       return <Navigate to="/electrical/indents" replace />;
     }
     return isAdmin ? <Navigate to="/hardware/indents" replace /> : <Navigate to="/hardware/indents/my" replace />;
   }
   if (target === 'manage-indents') {
-    return <Navigate to={`/${system}/indents`} replace />;
+    return isAdmin ? <Navigate to={`/${system}/indents`} replace /> : <Navigate to="/hardware/indents/my" replace />;
   }
   return <Navigate to={`/${system}/${target}`} replace />;
 };
 
 const SystemIndentDetailsRedirect = () => {
   const { id } = useParams();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const { activeSystem } = useSystem();
-  const system = activeSystem || localStorage.getItem('stock_active_system') || 'hardware';
+
+  if (loading) {
+    return <Loading message="Authenticating session..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const system = !isAdmin ? 'hardware' : (activeSystem || localStorage.getItem('stock_active_system') || 'hardware');
   return <Navigate to={`/${system}/indents/${id}`} replace />;
 };
 
 const SystemProductDetailsRedirect = () => {
   const { id } = useParams();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const { activeSystem } = useSystem();
-  const system = activeSystem || localStorage.getItem('stock_active_system') || 'hardware';
+
+  if (loading) {
+    return <Loading message="Authenticating session..." />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const system = !isAdmin ? 'hardware' : (activeSystem || localStorage.getItem('stock_active_system') || 'hardware');
   return <Navigate to={`/${system}/products/${id}`} replace />;
 };
 
@@ -328,12 +389,14 @@ export const AppRoutes = () => {
       {/* Public Route */}
       <Route path="/login" element={<Login />} />
 
-      {/* System Selection Portal */}
+      {/* System Selection Portal (Admin Only) */}
       <Route
         path="/select-system"
         element={
           <ProtectedRoute>
-            <SystemSelection />
+            <RoleRoute requireAdmin={true}>
+              <SystemSelection />
+            </RoleRoute>
           </ProtectedRoute>
         }
       />
@@ -368,8 +431,8 @@ export const AppRoutes = () => {
       <Route path="/notifications" element={<SystemRedirect target="notifications" />} />
 
       {/* Root Fallback */}
-      <Route path="/" element={<Navigate to="/select-system" replace />} />
-      <Route path="*" element={<Navigate to="/select-system" replace />} />
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   );
 };

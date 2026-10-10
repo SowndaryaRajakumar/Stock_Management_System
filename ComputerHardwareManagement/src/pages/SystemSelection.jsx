@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSystem } from '../context/SystemContext';
 
 export const SystemSelection = () => {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { selectSystem } = useSystem();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user && !isAdmin) {
+      selectSystem('hardware');
+      navigate('/hardware/dashboard', { replace: true });
+    }
+  }, [user, isAdmin, selectSystem, navigate]);
 
   const handleSelect = (system) => {
     selectSystem(system);
