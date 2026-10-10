@@ -5,7 +5,7 @@ import { useSystem } from '../../context/SystemContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { useStock } from '../../context/StockContext';
 
-export const Sidebar = ({ mobileOpen = false, onCloseMobile = () => {} }) => {
+export const Sidebar = ({ mobileOpen = false, onCloseMobile = () => { } }) => {
   const { user, isAdmin, logout } = useAuth();
   const { activeSystem, isElectrical } = useSystem();
   const { unreadCount } = useNotifications();
@@ -173,6 +173,14 @@ export const Sidebar = ({ mobileOpen = false, onCloseMobile = () => {} }) => {
                     onClick={handleLinkClick}
                   >
                     <span className="icon">▦</span> Product Catalog
+                  </NavLink>
+
+                  <NavLink
+                    to={getPath('/indents/create')}
+                    className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+                    onClick={handleLinkClick}
+                  >
+                    <span className="icon">＋</span> Physical Indent
                   </NavLink>
 
                   <NavLink

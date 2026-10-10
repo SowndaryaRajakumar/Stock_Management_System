@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSystem } from '../context/SystemContext';
 import Button from '../components/common/Button';
 
 export const Login = () => {
   const { login, isAuthenticated, user } = useAuth();
+  const { selectSystem } = useSystem();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -26,14 +28,25 @@ export const Login = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && user) {
+      const isUserAdmin = user.role?.toUpperCase() === 'ADMIN';
       const from = location.state?.from?.pathname;
       if (from && from !== '/login') {
+        if (!isUserAdmin && from.startsWith('/electrical')) {
+          selectSystem('hardware');
+          navigate('/hardware/dashboard', { replace: true });
+          return;
+        }
         navigate(from, { replace: true });
         return;
       }
-      navigate('/select-system', { replace: true });
+      if (!isUserAdmin) {
+        selectSystem('hardware');
+        navigate('/hardware/dashboard', { replace: true });
+      } else {
+        navigate('/select-system', { replace: true });
+      }
     }
-  }, [isAuthenticated, user, navigate, location]);
+  }, [isAuthenticated, user, navigate, location, selectSystem]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,12 +63,23 @@ export const Login = () => {
     setLoading(false);
 
     if (res.success && res.user) {
+      const isUserAdmin = res.user.role?.toUpperCase() === 'ADMIN';
       const from = location.state?.from?.pathname;
       if (from && from !== '/login') {
+        if (!isUserAdmin && from.startsWith('/electrical')) {
+          selectSystem('hardware');
+          navigate('/hardware/dashboard', { replace: true });
+          return;
+        }
         navigate(from, { replace: true });
         return;
       }
-      navigate('/select-system', { replace: true });
+      if (!isUserAdmin) {
+        selectSystem('hardware');
+        navigate('/hardware/dashboard', { replace: true });
+      } else {
+        navigate('/select-system', { replace: true });
+      }
     } else {
       setError(res.error || 'Invalid username/email or password');
     }

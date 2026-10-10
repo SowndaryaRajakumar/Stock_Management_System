@@ -18,7 +18,7 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import analyticsRoutes from './routes/analyticsRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import { getDashboardStats } from './controllers/analyticsController.js';
-import { protect } from './middleware/auth.js';
+import { protect, requireAdmin } from './middleware/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
@@ -51,8 +51,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// Core API Routes
+// Health check endpoint (public)
+app.get('/api/health', (req, res) => {
+  res.json({
+    success: true,
+    status: 'OK',
+    message: 'Consumable Stock Management System Backend Active',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Auth Routes (Login is public, /me is verified via JWT)
 app.use('/api/auth', authRoutes);
+
+// Electrical Subsystem Authorization:
+// Electrical module APIs are strictly accessible by ADMIN only.
+// Faculty users are blocked with 403 Forbidden.
+app.use('/api', protect, requireAdmin);
+
+// Core API Routes (Admin only on Electrical backend)
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/stock', stockRoutes);
@@ -63,7 +80,7 @@ app.use('/api/stock-documents', stockDocumentRouter);
 app.use('/api/indents', indentRoutes);
 
 // Dashboard direct endpoint
-app.get('/api/dashboard', protect, getDashboardStats);
+app.get('/api/dashboard', getDashboardStats);
 
 // Compatibility & Analytics Routes
 app.use('/api/history', stockHistoryRoutes);
@@ -74,16 +91,6 @@ app.use('/api/transfers', transferRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/notifications', notificationRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({
-    success: true,
-    status: 'OK',
-    message: 'Consumable Stock Management System Backend Active',
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Error handling middleware
 app.use(errorHandler);

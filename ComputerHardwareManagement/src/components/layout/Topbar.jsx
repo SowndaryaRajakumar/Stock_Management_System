@@ -5,7 +5,7 @@ import { useSystem } from '../../context/SystemContext';
 import NotificationDropdown from './NotificationDropdown';
 
 export const Topbar = ({ title = 'Dashboard', breadcrumb = 'Overview', onToggleMobile = () => {} }) => {
-  const { user, logout } = useAuth();
+  const { user, isAdmin, logout } = useAuth();
   const { activeSystem, selectSystem, isElectrical, isHardware } = useSystem();
   const [profileOpen, setProfileOpen] = useState(false);
   const [systemOpen, setSystemOpen] = useState(false);
@@ -65,118 +65,137 @@ export const Topbar = ({ title = 'Dashboard', breadcrumb = 'Overview', onToggleM
       </div>
 
       <div className="topbar-right">
-        {/* Active System Switcher Pill */}
-        <div style={{ position: 'relative' }} ref={systemRef}>
-          <button
-            type="button"
-            onClick={() => setSystemOpen(!systemOpen)}
+        {/* Active System Switcher Pill (Admin Only) */}
+        {isAdmin ? (
+          <div style={{ position: 'relative' }} ref={systemRef}>
+            <button
+              type="button"
+              onClick={() => setSystemOpen(!systemOpen)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: isElectrical ? '1px solid #f59e0b' : '1px solid #3b82f6',
+                background: isElectrical ? '#fffbeb' : '#eff6ff',
+                color: isElectrical ? '#b45309' : '#1d4ed8',
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+              title="Switch between Electrical and Hardware Stock Systems"
+            >
+              <span>{isElectrical ? '⚡ Electrical Stock' : '💻 Hardware Stock'}</span>
+              <span style={{ fontSize: '0.65rem' }}>▼</span>
+            </button>
+
+            {systemOpen && (
+              <div
+                className="card shadow-lg"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 8px)',
+                  right: 0,
+                  width: '240px',
+                  maxWidth: 'min(260px, calc(100vw - 24px))',
+                  zIndex: 1000,
+                  padding: '8px',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--white)',
+                  border: '1px solid var(--border)',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+                }}
+              >
+                <div style={{ padding: '6px 8px', fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
+                  Active Subsystem
+                </div>
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    background: isElectrical ? 'var(--blue-50)' : 'transparent',
+                    fontWeight: isElectrical ? 700 : 500,
+                    color: isElectrical ? 'var(--blue-700)' : 'var(--text-900)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.84rem'
+                  }}
+                  onClick={() => handleSwitchSystem('electrical')}
+                >
+                  <span>⚡ Electrical Stock</span>
+                  {isElectrical && <span style={{ marginLeft: 'auto', color: 'var(--blue-600)' }}>✓</span>}
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    background: isHardware ? 'var(--blue-50)' : 'transparent',
+                    fontWeight: isHardware ? 700 : 500,
+                    color: isHardware ? 'var(--blue-700)' : 'var(--text-900)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    fontSize: '0.84rem'
+                  }}
+                  onClick={() => handleSwitchSystem('hardware')}
+                >
+                  <span>💻 Computer Hardware</span>
+                  {isHardware && <span style={{ marginLeft: 'auto', color: 'var(--blue-600)' }}>✓</span>}
+                </button>
+                <div style={{ borderTop: '1px solid var(--border)', margin: '6px 0' }} />
+                <button
+                  type="button"
+                  style={{
+                    width: '100%',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '8px 10px',
+                    borderRadius: '6px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    fontSize: '0.82rem',
+                    color: 'var(--text-600)'
+                  }}
+                  onClick={() => { setSystemOpen(false); navigate('/select-system'); }}
+                >
+                  <span>▤ System Selection Menu</span>
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               padding: '6px 14px',
               borderRadius: '20px',
-              border: isElectrical ? '1px solid #f59e0b' : '1px solid #3b82f6',
-              background: isElectrical ? '#fffbeb' : '#eff6ff',
-              color: isElectrical ? '#b45309' : '#1d4ed8',
+              border: '1px solid #3b82f6',
+              background: '#eff6ff',
+              color: '#1d4ed8',
               fontSize: '0.82rem',
-              fontWeight: 700,
-              cursor: 'pointer'
+              fontWeight: 700
             }}
-            title="Switch between Electrical and Hardware Stock Systems"
           >
-            <span>{isElectrical ? '⚡ Electrical Stock' : '💻 Hardware Stock'}</span>
-            <span style={{ fontSize: '0.65rem' }}>▼</span>
-          </button>
-
-          {systemOpen && (
-            <div
-              className="card shadow-lg"
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 8px)',
-                right: 0,
-                width: '240px',
-                maxWidth: 'min(260px, calc(100vw - 24px))',
-                zIndex: 1000,
-                padding: '8px',
-                borderRadius: 'var(--radius-md)',
-                background: 'var(--white)',
-                border: '1px solid var(--border)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
-              }}
-            >
-              <div style={{ padding: '6px 8px', fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-                Active Subsystem
-              </div>
-              <button
-                type="button"
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  background: isElectrical ? 'var(--blue-50)' : 'transparent',
-                  fontWeight: isElectrical ? 700 : 500,
-                  color: isElectrical ? 'var(--blue-700)' : 'var(--text-900)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.84rem'
-                }}
-                onClick={() => handleSwitchSystem('electrical')}
-              >
-                <span>⚡ Electrical Stock</span>
-                {isElectrical && <span style={{ marginLeft: 'auto', color: 'var(--blue-600)' }}>✓</span>}
-              </button>
-              <button
-                type="button"
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  background: isHardware ? 'var(--blue-50)' : 'transparent',
-                  fontWeight: isHardware ? 700 : 500,
-                  color: isHardware ? 'var(--blue-700)' : 'var(--text-900)',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '0.84rem'
-                }}
-                onClick={() => handleSwitchSystem('hardware')}
-              >
-                <span>💻 Computer Hardware</span>
-                {isHardware && <span style={{ marginLeft: 'auto', color: 'var(--blue-600)' }}>✓</span>}
-              </button>
-              <div style={{ borderTop: '1px solid var(--border)', margin: '6px 0' }} />
-              <button
-                type="button"
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '8px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '0.82rem',
-                  color: 'var(--text-600)'
-                }}
-                onClick={() => { setSystemOpen(false); navigate('/select-system'); }}
-              >
-                <span>▤ System Selection Menu</span>
-              </button>
-            </div>
-          )}
-        </div>
+            <span>💻 Hardware Stock</span>
+          </div>
+        )}
 
         {/* Live Notification Dropdown */}
         <NotificationDropdown />

@@ -13,20 +13,20 @@ import {
   reviewIndent,
   completeIndent
 } from '../controllers/indentController.js';
-import { protect, requireAdmin, requireStaffOrAdmin } from '../middleware/auth.js';
+import { protect, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
-router.get('/', protect, getIndents);
-router.post('/', protect, requireStaffOrAdmin, createIndent);
+router.get('/', protect, requireAdmin, getIndents);
+router.post('/', protect, requireAdmin, createIndent);
 
-router.get('/:id', protect, getIndentById);
-router.put('/:id', protect, requireStaffOrAdmin, updateIndent);
-router.delete('/:id', protect, requireStaffOrAdmin, deleteIndent);
+router.get('/:id', protect, requireAdmin, getIndentById);
+router.put('/:id', protect, requireAdmin, updateIndent);
+router.delete('/:id', protect, requireAdmin, deleteIndent);
 
-// Compatibility endpoints
-router.post('/:id/submit', protect, requireStaffOrAdmin, submitIndent);
-router.post('/:id/recommend', protect, requireStaffOrAdmin, recommendIndent);
+// Compatibility endpoints (Admin only on Electrical backend)
+router.post('/:id/submit', protect, requireAdmin, submitIndent);
+router.post('/:id/recommend', protect, requireAdmin, recommendIndent);
 router.post('/:id/approve', protect, requireAdmin, approveIndent);
 router.post('/:id/reject', protect, requireAdmin, rejectIndent);
 router.post('/:id/complete', protect, requireAdmin, completeIndent);
